@@ -121,17 +121,13 @@ e-kavach/
 
 ---
 
-## 🚦 Getting Started & Local Setup
-
-- For an exhaustive, step-by-step local installation guide for Windows, macOS, and Linux, see **[LOCAL_SETUP.md](LOCAL_SETUP.md)**.
-- To host directly from your **own local computer** using your GoDaddy domain (`ekawach.co.in`), see **[LOCAL_HOSTING_WITH_GODADDY.md](LOCAL_HOSTING_WITH_GODADDY.md)**.
-- To deploy to a 24/7 cloud server (Render, Railway, VPS), see **[GODADDY_DOMAIN_AND_DEPLOYMENT.md](GODADDY_DOMAIN_AND_DEPLOYMENT.md)**.
+## 🚦 Getting Started
 
 ### Prerequisites
-- **Node.js**: `v18.0.0` or higher (`v20` LTS recommended)
-- **npm**: `v9.0.0` or higher (bundled with Node.js)
+- **Node.js**: `v18.0.0` or higher
+- **npm**: `v9.0.0` or higher (or `pnpm` / `yarn`)
 
-### 1. Clone or Download the Project
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/Avinesh-Shukla/E-Kavaach.git
 cd E-Kavaach
@@ -142,18 +138,22 @@ cd E-Kavaach
 npm install
 ```
 
-### 3. Launch the Unified Fullstack Server
+### 3. Launch Development Server
 ```bash
 npm run dev
 ```
-Open your browser at **`http://localhost:3000`** to access the complete application (Frontend + Express API + Socket.IO Telemetry).
+Open your browser at `http://localhost:5173` to explore the platform.
 
 ### 4. Build for Production
 ```bash
 npm run build
-npm start
 ```
-The optimized bundle will be compiled and served on `http://localhost:3000`.
+The optimized production output will be generated inside the `dist/` directory.
+
+### 5. Preview Production Build
+```bash
+npm run preview
+```
 
 ---
 

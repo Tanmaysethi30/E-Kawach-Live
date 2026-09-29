@@ -1,0 +1,40 @@
+const express = require('express');
+const router = express.Router();
+const adminController = require('../controllers/admin.controller');
+const { authenticateToken, requireRole } = require('../middleware/auth');
+
+router.use(authenticateToken);
+router.use(requireRole('hospital', 'hospital_admin', 'admin'));
+
+router.get('/dashboard/summary', (req, res, next) => adminController.getDashboardSummary(req, res, next));
+router.get('/summary', (req, res, next) => adminController.getDashboardSummary(req, res, next));
+router.get('/hospital-details', (req, res, next) => adminController.getHospitalDetails(req, res, next));
+router.put('/hospital-details', (req, res, next) => adminController.updateHospitalDetails(req, res, next));
+router.post('/hospital-details', (req, res, next) => adminController.updateHospitalDetails(req, res, next));
+router.get('/hospital-schema', (req, res, next) => adminController.getHospitalSchema(req, res, next));
+router.get('/hospital-schema/:hospital_id', (req, res, next) => adminController.getHospitalSchema(req, res, next));
+router.post('/hospital-schema', (req, res, next) => adminController.saveHospitalSchema(req, res, next));
+router.put('/hospital-schema', (req, res, next) => adminController.saveHospitalSchema(req, res, next));
+router.get('/beds', (req, res, next) => adminController.getBeds(req, res, next));
+router.patch('/beds/:id', (req, res, next) => adminController.updateBed(req, res, next));
+router.get('/pharmacy', (req, res, next) => adminController.getPharmacy(req, res, next));
+router.patch('/pharmacy/:id', (req, res, next) => adminController.updatePharmacy(req, res, next));
+router.get('/staff', (req, res, next) => adminController.getStaff(req, res, next));
+router.post('/staff', (req, res, next) => adminController.createStaff(req, res, next));
+router.put('/staff/:id', (req, res, next) => adminController.updateStaff(req, res, next));
+router.patch('/staff/:id', (req, res, next) => adminController.updateStaff(req, res, next));
+router.delete('/staff/:id', (req, res, next) => adminController.deleteStaff(req, res, next));
+router.get('/doctors', (req, res, next) => adminController.getDoctors(req, res, next));
+router.post('/doctors', (req, res, next) => adminController.createDoctor(req, res, next));
+router.put('/doctors/:id', (req, res, next) => adminController.updateDoctor(req, res, next));
+router.patch('/doctors/:id', (req, res, next) => adminController.updateDoctor(req, res, next));
+router.delete('/doctors/:id', (req, res, next) => adminController.deleteDoctor(req, res, next));
+router.get('/patients', (req, res, next) => adminController.getPatients(req, res, next));
+router.post('/patients', (req, res, next) => adminController.createPatient(req, res, next));
+router.get('/hospital-network', (req, res, next) => adminController.getHospitalNetwork(req, res, next));
+router.get('/network', (req, res, next) => adminController.getHospitalNetwork(req, res, next));
+router.post('/hospital-network', (req, res, next) => adminController.createNetworkNode(req, res, next));
+router.post('/network', (req, res, next) => adminController.createNetworkNode(req, res, next));
+router.get('/triage-queue', (req, res, next) => adminController.getTriageQueue(req, res, next));
+
+module.exports = router;

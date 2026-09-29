@@ -1,0 +1,301 @@
+openapi: 3.0.3
+info:
+  title: E-KAVACH Emergency Healthcare & Clinical Network API
+  version: 1.0.0
+  description: |
+    Production-grade backend service powering E-KAVACH emergency healthcare network,
+    ABHA citizen integration, Golden Hour emergency triage scanner, and hospital bed telemetry.
+servers:
+  - url: http://localhost:5000/api
+    description: Local Backend Service
+  - url: https://api.ekavach.health/api
+    description: Production Gateway
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: ekavach_access_token
+
+  schemas:
+    UserProfile:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [patient, doctor, hospital]
+        name:
+          type: string
+        title:
+          type: string
+        id:
+          type: string
+        tag:
+          type: string
+        hospital:
+          type: string
+        dashboardRoute:
+          type: string
+
+    EmergencyPass:
+      type: object
+      properties:
+        passToken:
+          type: string
+        bloodGroup:
+          type: string
+        criticalAllergies:
+          type: string
+        chronicConditions:
+          type: string
+        implants:
+          type: string
+        iceContacts:
+          type: array
+          items:
+            type: object
+        status:
+          type: string
+
+paths:
+  /health:
+    get:
+      summary: Service health and capability check
+      responses:
+        '200':
+          description: Service running ok
+
+  /auth/register:
+    post:
+      summary: Register a new patient, doctor, or hospital account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email:
+                  type: string
+                phone:
+                  type: string
+                password:
+                  type: string
+                role:
+                  type: string
+                  enum: [patient, doctor, hospital]
+                name:
+                  type: string
+      responses:
+        '201':
+          description: User registered
+
+  /auth/login:
+    post:
+      summary: User login returning exact AuthContext role profile shape
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                role:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+
+  /auth/otp/request:
+    post:
+      summary: Request 6-digit OTP verification code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                email:
+                  type: string
+      responses:
+        '200':
+          description: OTP dispatched
+
+  /auth/otp/verify:
+    post:
+      summary: Verify OTP code and authenticate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otp]
+              properties:
+                phone:
+                  type: string
+                otp:
+                  type: string
+                role:
+                  type: string
+      responses:
+        '200':
+          description: Verified and logged in
+
+  /patient/me:
+    get:
+      summary: Retrieve authenticated patient profile
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Patient profile
+
+  /patient/abha:
+    get:
+      summary: Get linked ABHA number and ABDM profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: ABHA details
+
+  /patient/emergency-pass:
+    get:
+      summary: Get active Golden Hour emergency medical pass
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Emergency pass details
+
+  /patient/health-history:
+    get:
+      summary: Get comprehensive clinical history and consultations
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Clinical health history
+
+  /patient/records:
+    post:
+      summary: Upload medical lab report or prescription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                document:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                recordType:
+                  type: string
+      responses:
+        '201':
+          description: Record uploaded
+
+  /doctor/scan:
+    post:
+      summary: Golden Hour Emergency Lookup (QR / NFC / Token)
+      description: |
+        Sub-3s SLA lookup. Allowed to bypass consent for immediate lifesaving info.
+        Generates an immutable audit log entry in AccessLog.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                passToken:
+                  type: string
+                qrData:
+                  type: string
+                abhaNumber:
+                  type: string
+      responses:
+        '200':
+          description: Emergency triage data returned and audited
+
+  /doctor/triage-queue:
+    get:
+      summary: Get emergency ward triage ingress list
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active triage bays
+
+  /doctor/patients:
+    post:
+      summary: Rapid intake new emergency patient
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Patient admitted to queue
+
+  /admin/dashboard/summary:
+    get:
+      summary: Comprehensive hospital operations summary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Bed metrics, census, triage status
+
+  /admin/beds:
+    get:
+      summary: Get hospital bed telemetry by ward
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Bed status
+
+  /admin/beds/{id}:
+    patch:
+      summary: Update bed occupancy and broadcast live WebSocket telemetry
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                occupiedBeds:
+                  type: integer
+      responses:
+        '200':
+          description: Bed updated

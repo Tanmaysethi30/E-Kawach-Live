@@ -1,0 +1,164 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Validation Primitives
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    function isBootstrappedAdmin() {
+      return isSignedIn() && request.auth.token.email == 'namanjain82670@gmail.com' && request.auth.token.email_verified == true;
+    }
+    function isAdmin() {
+      return isBootstrappedAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    function isDoctor() {
+      return isAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor');
+    }
+
+    // 1. User Profiles (/users/{userId})
+    function isValidUser(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.uid is string && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.name is string && data.name.size() <= 120 &&
+             data.role is string && (data.role in ['patient', 'doctor', 'admin', 'paramedic']) &&
+             (!('abhaId' in data) || (data.abhaId is string && data.abhaId.size() <= 64)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 32)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin() || isDoctor());
+      allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId &&
+                       isValidUser(incoming()) && incoming().uid == request.auth.uid &&
+                       (incoming().role != 'admin' || isAdmin());
+      allow update: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin()) &&
+                       isValidUser(incoming()) && incoming().uid == existing().uid &&
+                       (incoming().role == existing().role || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // 2. Trusted Admin Records (/admins/{adminId})
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if isBootstrappedAdmin();
+    }
+
+    // 3. Appointments & OPD Tokens (/appointments/{appointmentId})
+    function isValidAppointment(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.patientId is string && data.patientId.size() <= 128 &&
+             data.patientName is string && data.patientName.size() <= 120 &&
+             data.scheduledAt is string && data.scheduledAt.size() <= 64 &&
+             data.tokenNumber is string && data.tokenNumber.size() <= 64 &&
+             data.status is string && (data.status in ['PENDING', 'CONFIRMED', 'DECLINED', 'CANCELLED', 'COMPLETED']) &&
+             (!('doctorId' in data) || (data.doctorId is string && data.doctorId.size() <= 128)) &&
+             (!('department' in data) || (data.department is string && data.department.size() <= 120)) &&
+             (!('patientPhone' in data) || (data.patientPhone is string && data.patientPhone.size() <= 32)) &&
+             (!('timeSlot' in data) || (data.timeSlot is string && data.timeSlot.size() <= 64)) &&
+             (!('mode' in data) || (data.mode is string && (data.mode in ['IN_PERSON', 'TELECONSULT', 'EMERGENCY']))) &&
+             (!('symptoms' in data) || (data.symptoms is string && data.symptoms.size() <= 500)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    match /appointments/{appointmentId} {
+      allow get: if isSignedIn() && isValidId(appointmentId) &&
+                    (resource.data.patientId == request.auth.uid || resource.data.doctorId == request.auth.uid || isDoctor() || isAdmin());
+      allow list: if isSignedIn() &&
+                    (resource.data.patientId == request.auth.uid || resource.data.doctorId == request.auth.uid || isDoctor() || isAdmin());
+
+      allow create: if isSignedIn() && isValidId(appointmentId) &&
+                       isValidAppointment(incoming()) &&
+                       (incoming().patientId == request.auth.uid || isAdmin()) &&
+                       incoming().status == 'PENDING';
+
+      allow update: if isSignedIn() && isValidId(appointmentId) &&
+                       isValidAppointment(incoming()) &&
+                       incoming().patientId == existing().patientId &&
+                       (
+                         // Admin override
+                         isAdmin() ||
+                         // Terminal State Locking: once CANCELLED or COMPLETED, only admin can update
+                         (!(existing().status in ['CANCELLED', 'COMPLETED']) &&
+                           (
+                             // Action A: Doctor/Staff triage approval or decline
+                             ((isDoctor() || isAdmin()) &&
+                              incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'doctorId', 'notes']) &&
+                              (incoming().status in ['CONFIRMED', 'DECLINED', 'COMPLETED'])) ||
+                             // Action B: Patient cancellation of own slot
+                             (existing().patientId == request.auth.uid &&
+                              incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+                              incoming().status == 'CANCELLED')
+                           )
+                         )
+                       );
+
+      allow delete: if isAdmin();
+    }
+
+    // 4. Hospital Bed & ICU Telemetry (/beds/{bedId})
+    function isValidBed(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.ward is string && data.ward.size() <= 120 &&
+             data.status is string && (data.status in ['OCCUPIED', 'AVAILABLE', 'CLEANING', 'MAINTENANCE']) &&
+             (!('department' in data) || (data.department is string && data.department.size() <= 120)) &&
+             (!('oxygenLevel' in data) || (data.oxygenLevel is number)) &&
+             (!('patientName' in data) || (data.patientName is string && data.patientName.size() <= 120)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    match /beds/{bedId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if (isDoctor() || isAdmin()) && isValidId(bedId) && isValidBed(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // 5. Emergency Scan & Clinical Audit Logs (/accessLogs/{logId})
+    // Append-only, immutable audit trail for ABDM compliance
+    function isValidAccessLog(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.accessorId is string && data.accessorId.size() <= 128 &&
+             data.patientId is string && data.patientId.size() <= 128 &&
+             data.accessType is string && data.accessType.size() <= 64 &&
+             data.timestamp is string && data.timestamp.size() <= 64 &&
+             (!('accessorName' in data) || (data.accessorName is string && data.accessorName.size() <= 120)) &&
+             (!('accessorRole' in data) || (data.accessorRole is string && data.accessorRole.size() <= 64)) &&
+             (!('reason' in data) || (data.reason is string && data.reason.size() <= 500)) &&
+             (!('latencyMs' in data) || (data.latencyMs is number));
+    }
+
+    match /accessLogs/{logId} {
+      allow get: if isSignedIn() && isValidId(logId) &&
+                    (resource.data.accessorId == request.auth.uid || resource.data.patientId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() &&
+                    (resource.data.accessorId == request.auth.uid || resource.data.patientId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(logId) &&
+                       (isDoctor() || isAdmin()) &&
+                       incoming().accessorId == request.auth.uid &&
+                       isValidAccessLog(incoming());
+      allow update, delete: if false; // Strict ABDM immutability requirement
+    }
+  }
+}

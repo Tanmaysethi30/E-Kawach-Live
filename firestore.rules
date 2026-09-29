@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Validation Primitives
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    function isBootstrappedAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'namanjain82670@gmail.com'
+      );
+    }
+    function isAdmin() {
+      return isBootstrappedAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+    function isDoctor() {
+      return isAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor');
+    }
+
+    // 1. User Profiles (/users/{userId})
+    function isValidUser(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.uid is string && data.uid.size() <= 128 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 256)) &&
+             data.name is string && data.name.size() <= 120 &&
+             data.role is string && (data.role in ['patient', 'doctor', 'admin', 'paramedic', 'hospital']) &&
+             (!('abhaId' in data) || (data.abhaId is string && data.abhaId.size() <= 64)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 32)) &&
+             (!('licenseId' in data) || (data.licenseId is string && data.licenseId.size() <= 64)) &&
+             (!('hospital' in data) || (data.hospital is string && data.hospital.size() <= 120)) &&
+             (!('specialization' in data) || (data.specialization is string && data.specialization.size() <= 120)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    match /users/{userId} {
+      allow get: if true;
+      allow list: if isSignedIn();
+      allow create, update: if isValidId(userId) && isValidUser(incoming()) &&
+                               (
+                                 !isSignedIn() ||
+                                 request.auth.uid == userId ||
+                                 request.auth.uid == incoming().uid ||
+                                 isAdmin() ||
+                                 (incoming().role in ['patient', 'doctor', 'admin', 'paramedic', 'hospital'])
+                               );
+      allow delete: if isAdmin();
+    }
+
+    // 2. Trusted Admin Records (/admins/{adminId})
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if isBootstrappedAdmin();
+    }
+
+    // 3. Appointments & OPD Tokens (/appointments/{appointmentId})
+    function isValidAppointment(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.patientId is string && data.patientId.size() <= 128 &&
+             data.patientName is string && data.patientName.size() <= 120 &&
+             data.scheduledAt is string && data.scheduledAt.size() <= 64 &&
+             data.tokenNumber is string && data.tokenNumber.size() <= 64 &&
+             data.status is string && (data.status in ['PENDING', 'CONFIRMED', 'DECLINED', 'CANCELLED', 'COMPLETED']) &&
+             (!('doctorId' in data) || (data.doctorId is string && data.doctorId.size() <= 128)) &&
+             (!('department' in data) || (data.department is string && data.department.size() <= 120)) &&
+             (!('patientPhone' in data) || (data.patientPhone is string && data.patientPhone.size() <= 32)) &&
+             (!('timeSlot' in data) || (data.timeSlot is string && data.timeSlot.size() <= 64)) &&
+             (!('mode' in data) || (data.mode is string && (data.mode in ['IN_PERSON', 'TELECONSULT', 'EMERGENCY']))) &&
+             (!('symptoms' in data) || (data.symptoms is string && data.symptoms.size() <= 500)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if true;
+      allow create: if isValidId(appointmentId) &&
+                       isValidAppointment(incoming()) &&
+                       (incoming().status in ['PENDING', 'CONFIRMED']);
+
+      allow update: if isValidId(appointmentId) &&
+                       isValidAppointment(incoming()) &&
+                       incoming().patientId == existing().patientId &&
+                       (
+                         // Admin override
+                         isAdmin() ||
+                         // Doctor or authorized user updating triage / notes / status
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'doctorId', 'notes', 'mode', 'timeSlot'])
+                       );
+
+      allow delete: if isAdmin();
+    }
+
+    // 4. Hospital Bed & ICU Telemetry (/beds/{bedId})
+    function isValidBed(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.ward is string && data.ward.size() <= 120 &&
+             data.status is string && (data.status in ['OCCUPIED', 'AVAILABLE', 'CLEANING', 'MAINTENANCE']) &&
+             (!('department' in data) || (data.department is string && data.department.size() <= 120)) &&
+             (!('oxygenLevel' in data) || (data.oxygenLevel is number)) &&
+             (!('patientName' in data) || (data.patientName is string && data.patientName.size() <= 120)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    match /beds/{bedId} {
+      allow read: if true;
+      allow write: if isValidId(bedId) && isValidBed(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // 5. Emergency Scan & Clinical Audit Logs (/accessLogs/{logId})
+    function isValidAccessLog(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.accessorId is string && data.accessorId.size() <= 128 &&
+             data.patientId is string && data.patientId.size() <= 128 &&
+             data.accessType is string && data.accessType.size() <= 64 &&
+             data.timestamp is string && data.timestamp.size() <= 64 &&
+             (!('accessorName' in data) || (data.accessorName is string && data.accessorName.size() <= 120)) &&
+             (!('accessorRole' in data) || (data.accessorRole is string && data.accessorRole.size() <= 64)) &&
+             (!('reason' in data) || (data.reason is string && data.reason.size() <= 500)) &&
+             (!('latencyMs' in data) || (data.latencyMs is number));
+    }
+
+    match /accessLogs/{logId} {
+      allow read: if true;
+      allow create: if isValidId(logId) && isValidAccessLog(incoming());
+      allow update, delete: if false;
+    }
+  }
+}

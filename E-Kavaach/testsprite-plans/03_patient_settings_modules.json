@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/TestSprite/testsprite-cli/v0.10.0/schemas/plan.schema.json",
+  "projectId": "83ea8300-9adf-40cc-93b9-16ca1b16f7a7",
+  "type": "frontend",
+  "name": "Patient settings Configuration Suites switch modules cleanly",
+  "description": "In patient settings, clicking between Profile, Health ID & ABHA, Emergency Contacts & SOS, and Notifications activates each module.",
+  "priority": "p1",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the patient settings page at /patient/settings"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Profile' module in the Configuration Suites list"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the right panel displays the patient profile details with Full Legal Name and Mobile Number"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Emergency Contacts & SOS' module in the Configuration Suites list"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the emergency contacts management panel is displayed"
+    }
+  ]
+}

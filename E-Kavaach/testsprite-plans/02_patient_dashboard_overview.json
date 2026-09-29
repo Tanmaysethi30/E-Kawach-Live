@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/TestSprite/testsprite-cli/v0.10.0/schemas/plan.schema.json",
+  "projectId": "83ea8300-9adf-40cc-93b9-16ca1b16f7a7",
+  "type": "frontend",
+  "name": "Patient dashboard displays verified health ID and navigation links",
+  "description": "Patient portal dashboard shows the patient's verified ABHA ID card, clinical details, and links to appointments and emergency access.",
+  "priority": "p0",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the patient dashboard at /patient/dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Scroll through the dashboard overview to inspect the patient cards"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the page displays the verified health ID for Rajesh V. Sharma with ABHA number 9824-8819-3320"
+    }
+  ]
+}

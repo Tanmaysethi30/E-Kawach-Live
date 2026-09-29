@@ -1,0 +1,112 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with ABDM identity, ABHA ID, and clinical role in E-KAVACH",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 256 },
+        "name": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "enum": ["patient", "doctor", "admin", "paramedic", "hospital"] },
+        "abhaId": { "type": "string", "maxLength": 64 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "licenseId": { "type": "string", "maxLength": 64 },
+        "hospital": { "type": "string", "maxLength": 120 },
+        "specialization": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "uid", "name", "role"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Trusted system admin identifier for Firestore ABAC checks",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 256 },
+        "role": { "type": "string", "enum": ["admin"] }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "OPD consultation appointment with EK-SLOT token and triage status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "patientName": { "type": "string", "maxLength": 120 },
+        "patientPhone": { "type": "string", "maxLength": 32 },
+        "doctorId": { "type": "string", "maxLength": 128 },
+        "department": { "type": "string", "maxLength": 120 },
+        "scheduledAt": { "type": "string", "format": "date-time" },
+        "timeSlot": { "type": "string", "maxLength": 64 },
+        "tokenNumber": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "DECLINED", "CANCELLED", "COMPLETED"] },
+        "mode": { "type": "string", "enum": ["IN_PERSON", "TELECONSULT", "EMERGENCY"] },
+        "symptoms": { "type": "string", "maxLength": 500 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "patientId", "patientName", "scheduledAt", "status", "tokenNumber"]
+    },
+    "BedTelemetry": {
+      "title": "BedTelemetry",
+      "description": "Hospital ward and ICU bed capacity and telemetry data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ward": { "type": "string", "maxLength": 120 },
+        "department": { "type": "string", "maxLength": 120 },
+        "status": { "type": "string", "enum": ["OCCUPIED", "AVAILABLE", "CLEANING", "MAINTENANCE"] },
+        "oxygenLevel": { "type": "number" },
+        "patientName": { "type": "string", "maxLength": 120 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ward", "status"]
+    },
+    "AccessLog": {
+      "title": "AccessLog",
+      "description": "ABDM Golden Hour emergency scan audit trail and access logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "accessorId": { "type": "string", "maxLength": 128 },
+        "accessorName": { "type": "string", "maxLength": 120 },
+        "accessorRole": { "type": "string", "maxLength": 64 },
+        "patientId": { "type": "string", "maxLength": 128 },
+        "accessType": { "type": "string", "maxLength": 64 },
+        "reason": { "type": "string", "maxLength": 500 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "latencyMs": { "type": "number" }
+      },
+      "required": ["id", "accessorId", "patientId", "accessType", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents mapped to auth UID"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Trusted admin documents for ABAC checks"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Hospital OPD consultation tokens and appointment requests"
+    },
+    "/beds/{bedId}": {
+      "schema": "BedTelemetry",
+      "description": "Real-time ICU and ward bed telemetry and occupancy"
+    },
+    "/accessLogs/{logId}": {
+      "schema": "AccessLog",
+      "description": "Audit trail entries for emergency scans and clinical record lookups"
+    }
+  }
+}

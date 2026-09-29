@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/TestSprite/testsprite-cli/v0.10.0/schemas/plan.schema.json",
+  "projectId": "83ea8300-9adf-40cc-93b9-16ca1b16f7a7",
+  "type": "frontend",
+  "name": "Landing page registration card switches roles and displays patient registration",
+  "description": "On the home landing page, the user can click Get Your Health ID to scroll to the registration card and switch between role tabs.",
+  "priority": "p0",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the home page"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Get Your Health ID' button in the top navigation bar"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'For Doctor' tab button on the registration card"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'For Patient' tab button on the registration card"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the registration card displays the 'Name on Aadhaar' field and 'Register for E-KAVACH' heading"
+    }
+  ]
+}

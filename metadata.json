@@ -1,0 +1,11 @@
+{
+  "name": "Remix e-kavach_new",
+  "description": "E-KAWACH: National Trauma & Emergency Medical Network with ABHA ID integration, real-time hospital bed telemetrics, and instant clinical triage.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,225 @@
+{
+  "info": {
+    "name": "E-KAVACH API Collection",
+    "_postman_id": "e-kavach-api-collection-v1",
+    "description": "Comprehensive Postman collection for E-KAVACH emergency health access, ABHA integration, Golden Hour scanning, and telemetry.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Service Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login (Patient - Rajesh Sharma)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rajesh.sharma@ekavach.health\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login (Doctor - Dr. Kavitha Menon)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"dr.kavitha@apollo.health\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login (Admin - Dr. R. K. Nambiar)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin.nambiar@apollo.health\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+91 98401 22819\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/otp/request", "host": ["{{baseUrl}}"], "path": ["auth", "otp", "request"] }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+91 98401 22819\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/otp/verify", "host": ["{{baseUrl}}"], "path": ["auth", "otp", "verify"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Patient",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/patient/me", "host": ["{{baseUrl}}"], "path": ["patient", "me"] }
+          }
+        },
+        {
+          "name": "Get ABHA Details",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/patient/abha", "host": ["{{baseUrl}}"], "path": ["patient", "abha"] }
+          }
+        },
+        {
+          "name": "Get Emergency Pass",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/patient/emergency-pass", "host": ["{{baseUrl}}"], "path": ["patient", "emergency-pass"] }
+          }
+        },
+        {
+          "name": "Get Health History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/patient/health-history", "host": ["{{baseUrl}}"], "path": ["patient", "health-history"] }
+          }
+        },
+        {
+          "name": "Get Access Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/patient/access-logs", "host": ["{{baseUrl}}"], "path": ["patient", "access-logs"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Doctor",
+      "item": [
+        {
+          "name": "Golden Hour Emergency Scan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"passToken\": \"EK-TR-88190-V4\",\n  \"qrData\": \"EKAVACH:ABHA:9824-8819-3320-TN:TOKEN:EK-TR-88190-V4\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/doctor/scan", "host": ["{{baseUrl}}"], "path": ["doctor", "scan"] }
+          }
+        },
+        {
+          "name": "Get Triage Queue",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/doctor/triage-queue", "host": ["{{baseUrl}}"], "path": ["doctor", "triage-queue"] }
+          }
+        },
+        {
+          "name": "Get Hospital Network",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/doctor/network", "host": ["{{baseUrl}}"], "path": ["doctor", "network"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/dashboard/summary", "host": ["{{baseUrl}}"], "path": ["admin", "dashboard", "summary"] }
+          }
+        },
+        {
+          "name": "Get Beds",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/beds", "host": ["{{baseUrl}}"], "path": ["admin", "beds"] }
+          }
+        },
+        {
+          "name": "Update Bed Occupancy",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"occupiedBeds\": 47\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/admin/beds/bed-icu", "host": ["{{baseUrl}}"], "path": ["admin", "beds", "bed-icu"] }
+          }
+        },
+        {
+          "name": "Get Pharmacy Inventory",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/pharmacy", "host": ["{{baseUrl}}"], "path": ["admin", "pharmacy"] }
+          }
+        },
+        {
+          "name": "Get Staff",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/staff", "host": ["{{baseUrl}}"], "path": ["admin", "staff"] }
+          }
+        }
+      ]
+    }
+  ]
+}
