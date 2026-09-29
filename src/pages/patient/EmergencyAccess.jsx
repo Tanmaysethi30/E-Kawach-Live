@@ -156,24 +156,38 @@ export default function EmergencyAccess() {
     }
   }, [currentUser?.id, currentUser?.token]);
 
+  const routeAbortRef = useRef(null);
+
   // 2. Fetch Real OSRM Road Path when hospital or patient location changes
   const fetchRoute = useCallback(async (fromLat, fromLng, toHospital) => {
     if (!toHospital || !fromLat || !fromLng) return;
-    const toLat = toHospital.geoLat || toHospital.lat;
-    const toLng = toHospital.geoLng || toHospital.lng;
-    if (!toLat || !toLng) return;
+    const toLat = Number(toHospital.geoLat ?? toHospital.lat);
+    const toLng = Number(toHospital.geoLng ?? toHospital.lng);
+    if (isNaN(toLat) || isNaN(toLng)) return;
+
+    if (routeAbortRef.current) {
+      routeAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    routeAbortRef.current = controller;
 
     setIsLoadingRoute(true);
     try {
       const res = await fetch(
-        `/api/patient/route?fromLat=${fromLat}&fromLng=${fromLng}&toLat=${toLat}&toLng=${toLng}`
+        `/api/patient/route?fromLat=${fromLat}&fromLng=${fromLng}&toLat=${toLat}&toLng=${toLng}`,
+        { signal: controller.signal }
       );
       const data = await res.json();
       if (data.success) {
-        setRouteData(data);
+        setRouteData({
+          ...data,
+          targetHospitalId: toHospital.id,
+        });
       }
     } catch (err) {
-      console.error('Failed to fetch road route:', err);
+      if (err.name !== 'AbortError') {
+        console.error('Failed to fetch road route:', err);
+      }
     } finally {
       setIsLoadingRoute(false);
     }
@@ -183,6 +197,8 @@ export default function EmergencyAccess() {
   useEffect(() => {
     if (selectedHospital && userLocation?.lat && userLocation?.lng) {
       fetchRoute(userLocation.lat, userLocation.lng, selectedHospital);
+    } else {
+      setRouteData(null);
     }
   }, [selectedHospital?.id, selectedHospital?.geoLat, selectedHospital?.geoLng, userLocation?.lat, userLocation?.lng, fetchRoute]);
 
@@ -373,6 +389,8 @@ export default function EmergencyAccess() {
       handleRequestGpsLocation();
       return;
     }
+    setSelectedHospital(null);
+    setRouteData(null);
     const coords = {
       lat: preset.lat,
       lng: preset.lng,
@@ -409,6 +427,8 @@ export default function EmergencyAccess() {
   const handleSelectSearchedLoc = (item) => {
     setShowLocDropdown(false);
     setLocationSearchInput('');
+    setSelectedHospital(null);
+    setRouteData(null);
     const coords = {
       lat: item.lat,
       lng: item.lng,
@@ -430,6 +450,8 @@ export default function EmergencyAccess() {
 
   // Update location from map pin drop or search
   const handleUpdateUserLocation = (newCoords) => {
+    setSelectedHospital(null);
+    setRouteData(null);
     setUserLocation((prev) => ({
       ...prev,
       ...newCoords,

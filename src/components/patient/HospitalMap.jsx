@@ -49,27 +49,27 @@ export default function HospitalMap({
     { name: 'Chennai', lat: 13.0604, lng: 80.2496, label: 'Chennai, Tamil Nadu' },
   ];
 
-  // Tile Provider Configurations
+  // Tile Provider Configurations (100% Free, No Watermark, No API Key Required)
   const tileLayers = {
     clinical: {
-      url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+      attribution: 'Tiles &copy; Esri &mdash; National Geographic, DeLorme, NAVTEQ',
       maxZoom: 19,
     },
     osm: {
-      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      attribution: '&copy; OpenStreetMap contributors',
+      url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
     },
     satellite: {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      attribution: 'Tiles &copy; Esri',
+      attribution: 'Tiles &copy; Esri &mdash; Earthstar Geographics',
       maxZoom: 18,
     },
     dark: {
-      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      maxZoom: 19,
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+      maxZoom: 16,
     },
   };
 
@@ -532,7 +532,16 @@ export default function HospitalMap({
 
       if (isNaN(pLat) || isNaN(pLng) || isNaN(hLat) || isNaN(hLng)) return;
 
-      let coords = routeData?.coordinates;
+      // Validate that routeData actually belongs to this selectedHospital and current location
+      const routeDestinationMatches =
+        routeData &&
+        (routeData.targetHospitalId === selectedHospital.id ||
+          (Array.isArray(routeData.coordinates) &&
+            routeData.coordinates.length > 0 &&
+            Math.abs(routeData.coordinates[routeData.coordinates.length - 1][0] - hLat) < 0.15 &&
+            Math.abs(routeData.coordinates[routeData.coordinates.length - 1][1] - hLng) < 0.15));
+
+      let coords = routeDestinationMatches ? routeData.coordinates : null;
       if (!coords || !Array.isArray(coords) || coords.length === 0) {
         coords = [
           [pLat, pLng],
@@ -571,8 +580,8 @@ export default function HospitalMap({
       const midIdx = Math.floor(coords.length / 2);
       const midPoint = coords[midIdx] || coords[0];
 
-      const routeDistance = routeData?.distanceKm || selectedHospital.distanceKm || '2.0';
-      const routeTime = routeData?.durationMins || selectedHospital.ambulanceMins || '5';
+      const routeDistance = routeDestinationMatches ? (routeData?.distanceKm || selectedHospital.distanceKm) : selectedHospital.distanceKm;
+      const routeTime = routeDestinationMatches ? (routeData?.durationMins || selectedHospital.ambulanceMins) : selectedHospital.ambulanceMins;
 
       const etaBubbleIcon = L.divIcon({
         className: 'leaflet-eta-bubble !bg-transparent !border-0',
