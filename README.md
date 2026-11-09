@@ -133,7 +133,7 @@ e-kavach/
 
 ### 1. Clone or Download the Project
 ```bash
-git clone https://github.com/Avinesh-Shukla/E-Kavaach.git
+git clone https://github.com/Tanmaysethi30/E-Kawach-Live
 cd E-Kavaach
 ```
 
